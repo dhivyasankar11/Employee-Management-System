@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Employee Management</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      text-align: center;
+      color: white;
+      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+                  url("https://images.unsplash.com/photo-1556761175-4b46a572b786");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+
+    header {
+      background: #003366;
+      color: #fff;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .logout-btn {
+      background: #ff3333;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s ease;
+    }
+    .logout-btn:hover {
+      background: #cc0000;
+    }
+
+    .container {
+      width: 800px;
+      margin: 50px auto;
+      background: white;
+      color: black;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0px 0px 15px rgba(0,0,0,0.4);
+    }
+
+    input {
+      width: 90%;
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #5a67d8;
+    }
+
+    .delete-btn {
+      background: red;
+    }
+
+    .delete-btn:hover {
+      background: darkred;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #667eea;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    tr:hover {
+      background: #f1f1f1;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ✅ Header with Logout -->
+  <header>
+    <h2>Employee Management System</h2>
+    <form method="get" action="/logout">
+      <button type="submit" class="logout-btn">Logout</button>
+    </form>
+  </header>
+
+  <div class="container">
+    <h3>Add Employee</h3>
+    <input type="text" id="name" placeholder="Name"><br>
+    <input type="text" id="email" placeholder="Email"><br>
+    <input type="text" id="department" placeholder="Department"><br>
+    <input type="text" id="position" placeholder="Position"><br>
+    <input type="text" id="salary" placeholder="Salary"><br>
+
+    <button id="btn" onclick="saveEmployee()">Add Employee</button>
+
+    <h3>Employee List</h3>
+    <input type="text" id="search" placeholder="Search employee..." onkeyup="searchEmployee()">
+
+    <table id="employeeTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Salary</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let employees = [];
+
+    // 🔄 LOAD EMPLOYEES
+    function loadEmployees() {
+      fetch('/employees')
+        .then(res => res.json())
+        .then(data => {
+          employees = data;
+          displayEmployees(employees);
+        });
+    }
+
+    // 📄 DISPLAY EMPLOYEES IN TABLE
+    function displayEmployees(data) {
+      let list = document.getElementById("list");
+      list.innerHTML = "";
+
+      data.forEach(emp => {
+        let row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${emp.name}</td>
+          <td>${emp.email}</td>
+          <td>${emp.department}</td>
+          <td>${emp.position || "-"}</td>
+          <td>$${emp.salary || 0}</td>
+          <td>
+            <button onclick="editEmployee(${emp.id})">Edit</button>
+            <button class="delete-btn" onclick="deleteEmployee(${emp.id})">Delete</button>
+          </td>
+        `;
+
+        list.appendChild(row);
+      });
+    }
+
+    // ✏️ EDIT EMPLOYEE
+    function editEmployee(id) {
+      let emp = employees.find(e => e.id == id);
+      document.getElementById("name").value = emp.name;
+      document.getElementById("email").value = emp.email;
+      document.getElementById("department").value = emp.department;
+      document.getElementById("position").value = emp.position;
+      document.getElementById("salary").value = emp.salary;
+
+      let btn = document.getElementById("btn");
+      btn.innerText = "Update Employee";
+      btn.setAttribute("data-id", emp.id);
+    }
+
+    // ❌ DELETE EMPLOYEE
+    function deleteEmployee(id) {
+      if (confirm("Delete this employee?")) {
+        fetch('/employees/' + id, { method: 'DELETE' })
+          .then(() => loadEmployees());
+      }
+    }
+
+    // 🔍 SEARCH FUNCTION
+    function searchEmployee() {
+      let keyword = document.getElementById("search").value.toLowerCase();
+      let filtered = employees.filter(emp =>
+        emp.name.toLowerCase().includes(keyword) ||
+        emp.email.toLowerCase().includes(keyword) ||
+        emp.department.toLowerCase().includes(keyword) ||
+        (emp.position && emp.position.toLowerCase().includes(keyword)) ||
+        (emp.salary && emp.salary.toString().includes(keyword))
+      );
+      displayEmployees(filtered);
+    }
+
+    // ➕ ADD + ✏️ UPDATE
+    function saveEmployee() {
+      let btn = document.getElementById("btn");
+      let empId = btn.getAttribute("data-id");
+
+      let emp = {
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        department: document.getElementById("department").value,
+        position: document.getElementById("position").value,
+        salary: document.getElementById("salary").value
+      };
+
+      if (empId) {
+        emp.id = empId;
+        fetch('/employees', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emp)
+        }).then(() => { resetForm(); loadEmployees(); });
+      } else {
+        fetch('/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emp)
+        }).then(() => { resetForm(); loadEmployees(); });
+      }
+    }
+
+    // 🔄 RESET FORM
+    function resetForm() {
+      document.getElementById("name").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("department").value = "";
+      document.getElementById("position").value = "";
+      document.getElementById("salary").value = "";
+
+      let btn = document.getElementById("btn");
+      btn.innerText = "Add Employee";
+      btn.removeAttribute("data-id");
+    }
+
+    // 🚀 INITIAL LOAD
+    loadEmployees();
+  </script>
+</body>
+</html>
